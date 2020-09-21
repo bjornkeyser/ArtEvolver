@@ -1,20 +1,14 @@
-import java.util.EnumSet;  //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>//
-
-enum _type { 
+enum _type {  //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>//
   // arity 1
-  SIN, COS, ASIN, ACOS, TAN, ATAN, EXP, SQRT, LOG, ABS, 
+  SIN, COS, ASIN, ACOS, TAN, ATAN, EXP, SQRT, ABS, SQ, 
     // arity 2
-    ADD, SUB, MULT, DIV, MOD, POW, bAND, bOR, XOR, 
+    ADD, SUB, MULT, DIV, MOD, POW, LOG, MAG, PERLIN, 
     // arity 3
-    IFTHEN, 
-    // terminals
-    VAR, CONST, 
+    LERP, 
     // Exclude for now
-    EQUALS, LT, GT, NOISE, RANDOMGAUSS, NONE
+    VAR, CONST, EQUALS, LT, GT, NOISE, RANDOMGAUSS, IFTHEN
+    //TODO: bAND, bOR, XOR
 };
-
-EnumSet<_type> bools = EnumSet.of(_type.EQUALS, _type.LT, _type.GT, _type.NONE, _type.NOISE, _type.RANDOMGAUSS); // TODO: IMPLEMENT NOISE, RANDOMGAUSS
-EnumSet<_type> nonbools = EnumSet.complementOf(bools);
 
 
 class DNA {
@@ -25,23 +19,28 @@ class DNA {
   }
 
   Node randTree(int depth) {
-    float probVar = map(abs(depth - 0), MAX_DEPTH, 0, 0, 1);
-    if (random(1) < probVar) {
-      return randVar();
+    for (int i = 0; i < MAX_DEPTH - depth; i ++) {
+      print("-");
+    }
+    float probVar = map(depth, MAX_DEPTH, 0, 0, 1);
+    if (random(1) < probVar){// || depth == 0) {
+      Node randVar = randVar();
+      print(randVar.type + "\n");
+      return randVar;
     }
     Node root = randNode();
-    if (root.n_args > 0) {
-      print("C");
-      if (root.type == _type.IFTHEN) {
-        Node bool = randBool();
-        for (int i = 0; i < bool.n_args; i++) {
-          bool.args.add(randTree(depth-1));
-        }
-        root.args.add(bool);
-        root.args.add(randTree(depth-1));
-        root.args.add(randTree(depth-1));
-        return root;
+    print(root.type + "\n");
+    if (root.type == _type.IFTHEN) {
+      Node bool = randBool();
+      for (int i = 0; i < bool.n_args; i++) {
+        bool.args.add(randNode()); //TODO; hoort randTree te zijn
       }
+      root.args.add(bool);
+      root.args.add(randTree(depth-1));
+      root.args.add(randTree(depth-1));
+      return root;
+    }
+    if (root.n_args > 0) {
       for (int i = 0; i < root.n_args; i++) {
         root.args.add(randTree(depth-1));
       }
@@ -50,18 +49,23 @@ class DNA {
   }
 
   Node randNode() {
+    if (random(1) < 0.3) return randVar();
     Node rand = new Node();
-    rand.type = _type.values()[int(random(_type.values().length - 7))];
+    rand.type = _type.values()[int(random((_type.values().length) - 9))];
     rand.n_args = getNumInputs(rand);
     return rand;
   }
 
   Node randVar() {
-    switch (int(random(2))) {
+    switch (int(random(4))) {
     case 0:
       return new X();
-    default:
+    case 1:
       return new Y();
+    case 2:
+      return new Ang();
+    default:
+      return new Rad();
     }
   }
 
@@ -96,9 +100,10 @@ class DNA {
     case ATAN:
     case EXP:
     case SQRT:
-    case LOG:
     case ABS:
+    case SQ:
       return 1;
+    case LOG:
     case ADD:
     case SUB:
     case MULT:
@@ -110,11 +115,11 @@ class DNA {
     case NOISE:
     case RANDOMGAUSS:
     case POW:
-    case bAND:
-    case bOR:
-    case XOR:
+    case MAG:
+    case PERLIN:
       return 2;
     case IFTHEN:
+    case LERP:
       return 3;
     default:
       print("WTF");
@@ -122,65 +127,60 @@ class DNA {
     }
   }
   float getColorVal(int x, int y, int w) {
-    float norm_x = 2*((float)x) / ((float)w) - 1.0;  
-    float norm_y = 2*((float)y) / ((float)w) - 1.0;
+    float norm_x = 2*((float)x) / ((float)width) - 1.0;  
+    float norm_y = 2*((float)y) / ((float)height) - 1.0;
     float col = this.getRootVal(norm_x, norm_y);
-    print("\n");
     col = col/(1+col);
-    
-    if (col == Float.NaN) print("Error NaNNNNNNNNNNNNNNNNNNNNNNNNNN"); 
-    //print("col: " + col + "\n");
-    //col *= 255;
-    return col;
+    return max(min(col, 10000000), -10000000);
     //return min(255, max(0, (int)col));
   }
 
   float getRootVal(float x, float y) {
     if (root != null) return root.getVal(x, y);
-    print("wtf"); 
+    print("wtf");
     return -1;
   }
 
   class Node {
-    ArrayList<Node> args;
+    ArrayList<Node> args = new ArrayList<Node>();
     _type type;
     int n_args;
 
     Node() {
-      args = new ArrayList<Node>();
-      type = _type.NONE;
+      type = _type.ADD;
     }
 
     float getVal(float x, float y) {
-      print(this.type + " ");
       switch(this.type) {
       case VAR:
       case CONST:
-        return this.getVal(x, y);
+        print(this.getClass());
+        //return this.getVal(x, y);
 
       case SIN:
-        return sin(args.get(0).getVal(x, y));
+        return sin((args.get(0).getVal(x, y)*PI)/2 + 0.5);
       case COS:
-        return cos(args.get(0).getVal(x, y));
+        return cos((args.get(0).getVal(x, y)*PI)/2 + 0.5);
       case ASIN:
-        //input range [-1,1] output [-PI/2, PI/2]
-        return asin(args.get(0).getVal(x, y));
+        return asin(map4InverseTrig(args.get(0).getVal(x, y)));
       case ACOS:
-        return acos(args.get(0).getVal(x, y));
+        return acos(map4InverseTrig(args.get(0).getVal(x, y)));
       case TAN:
         return tan(args.get(0).getVal(x, y));
       case ATAN:
-        return atan(args.get(0).getVal(x, y));
+        return atan(map4InverseTrig(args.get(0).getVal(x, y)));
       case EXP:
         return exp(args.get(0).getVal(x, y));
       case SQRT:
         return sqrt(abs(args.get(0).getVal(x, y)));
       case LOG:
-        return log(abs(args.get(0).getVal(x, y)));
+        return log(abs(args.get(0).getVal(x, y)))/log(abs(args.get(1).getVal(x, y)));
       case ABS:
         return abs(args.get(0).getVal(x, y));
-        //          ADD, SUB, MULT, DIV, MOD, EQUALS, LT, GT, NOISE, RANDOMGAUSS, POW, 
-
+      case SQ:
+        return sq(args.get(0).getVal(x, y));
+      case MAG:
+        return mag(args.get(0).getVal(x, y), args.get(1).getVal(x, y));
       case ADD:
         return args.get(0).getVal(x, y) + args.get(1).getVal(x, y);
       case SUB:
@@ -188,7 +188,7 @@ class DNA {
       case MULT:
         return args.get(0).getVal(x, y) * args.get(1).getVal(x, y);
       case DIV:
-        if (args.get(1).getVal(x,y) == 0) {
+        if (args.get(1).getVal(x, y) == 0) {
           return args.get(0).getVal(x, y) / (args.get(1).getVal(x, y) + 0.1);  // never divide by 0
         }
         return args.get(0).getVal(x, y) / args.get(1).getVal(x, y);
@@ -196,13 +196,16 @@ class DNA {
         return args.get(0).getVal(x, y) % args.get(1).getVal(x, y);
       case POW:
         return pow(args.get(0).getVal(x, y), args.get(1).getVal(x, y));
-      case bAND:
-        return int(args.get(0).getVal(x, y)) & int(args.get(1).getVal(x, y)); //int casting???
-      case bOR:
-        return int(args.get(0).getVal(x, y)) | int(args.get(1).getVal(x, y));
-      case XOR:
-        return int(args.get(0).getVal(x, y)) ^ int(args.get(1).getVal(x, y));
-
+      case PERLIN:
+        return noise(args.get(0).getVal(x, y), args.get(1).getVal(x, y));
+        /*case bAND:
+         return int(args.get(0).getVal(x, y)) & int(args.get(1).getVal(x, y)); //int casting???
+         case bOR:
+         return int(args.get(0).getVal(x, y)) | int(args.get(1).getVal(x, y));
+         case XOR:
+         return int(args.get(0).getVal(x, y)) ^ int(args.get(1).getVal(x, y));*/
+      case LERP:
+        return lerp(args.get(0).getVal(x, y), args.get(1).getVal(x, y), args.get(2).getVal(x, y)/(args.get(2).getVal(x, y)+1));
       case IFTHEN:
         return args.get(0).getBoolVal(x, y) ? args.get(1).getVal(x, y) : args.get(2).getVal(x, y);
       default:
@@ -228,9 +231,9 @@ class DNA {
   class X extends Node {
     X() {
       type = _type.VAR;
+      n_args = 0;
     }
     float getVal(float x, float y) { 
-      print("X");
       return x;
     }
   }
@@ -238,19 +241,45 @@ class DNA {
   class Y extends Node {
     Y() {
       type = _type.VAR;
+      n_args = 0;
     }
     float getVal(float x, float y) { 
-      print("Y");
       return y;
+    }
+  }
+
+  class Ang extends Node {
+    Ang() {
+      type = _type.VAR;
+      n_args = 0;
+    }
+    float getVal(float x, float y) { 
+      return tan(y/x);
     }
   }
 
   class Const extends Node {
     Const() {
       type = _type.CONST;
+      n_args = 0;
     }
-    float getVal(float x, float y) { 
-      return 1;    //TODO!
+    float getVal(float x, float y) {
+      return random(-10, 10);
+      //TODO!
     }
   }
+
+  class Rad extends Node {
+    Rad() {
+      type = _type.VAR;
+      n_args = 0;
+    }
+    float getVal(float x, float y) { 
+      return dist(x, y, 0, 0);
+    }
+  }
+}
+
+float map4InverseTrig(float x) {
+  return 2*(x/(x+1))-1;
 }

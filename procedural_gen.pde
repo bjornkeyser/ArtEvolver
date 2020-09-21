@@ -2,12 +2,12 @@ int w, h;
 Image[] phenotypes;
 int POP_SIZE = 1;
 boolean IS_BW = true;
-int MAX_DEPTH = 4;
+int MAX_DEPTH = 15;
 
 
 void setup() {
   size(200, 200, P2D); 
-  colorMode(HSB, 255, 255, 255);
+  colorMode(HSB, 360, 100, 100);
   w = width;
   h = height;
   background(0); 
@@ -17,7 +17,7 @@ void setup() {
   phenotypes = new Image[POP_SIZE];
   for (int i = 0; i < POP_SIZE; i++) {
     phenotypes[i] = new Image(w, h, IS_BW);
-    phenotypes[i].drawImage();
+    phenotypes[i].drawImage(); //<>//
   }
 }
 
@@ -28,5 +28,6 @@ void mousePressed() {
   for (int i = 0; i < POP_SIZE; i++) {
     phenotypes[i] = new Image(w, h, IS_BW);
     phenotypes[i].drawImage();
+    print("\n");
   }
 }

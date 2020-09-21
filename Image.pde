@@ -1,5 +1,5 @@
-color warm = color(22, 255, 255); //<>// //<>// //<>//
-color cool = color(149, 255, 255);
+color warm = color(random(0,360), 100, 100);
+color cool = color(random(0,360), 100, 100);
 color stroke = color(0, 0, 0);
 
 class Image {
@@ -19,6 +19,7 @@ class Image {
   }
 
   void drawImage() {
+    float min = 0, max = 0;
     for (int x = 0; x < w; x++) {
       for (int y = 0; y < h; y++) {
         if (!isBW) {
@@ -29,14 +30,16 @@ class Image {
           //stroke(hu, s, b);
         } else {
           float bw = grey.getColorVal(x, y, w);
-          bw = (bw+1)/2;
-          print(bw + "\n");
-          stroke = lerpColor(warm, cool, bw);
-          stroke = color(hue(stroke),saturation(stroke),255*bw);
+          float scaledCol = ((bw/(bw+1)) + 1)/2; //TODO: idont even fokin know
+          if (scaledCol < min) min = scaledCol;
+          if (scaledCol > max) max = scaledCol;
+          stroke = lerpColor(warm, cool, scaledCol);
+          stroke = color(hue(stroke),map(scaledCol, -1, 1, 100, 0) ,255*bw);
           stroke(stroke);
         }
         point(x, y);
       }
     }
+    print("min: " + min + " max: " + max);
   }
 }
