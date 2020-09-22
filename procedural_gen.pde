@@ -2,7 +2,7 @@ int w, h;
 Image[] phenotypes;
 int POP_SIZE = 1;
 boolean IS_BW = true;
-int MAX_DEPTH = 15;
+int MAX_DEPTH = 50;
 
 
 void setup() {

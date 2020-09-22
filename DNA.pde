@@ -18,18 +18,17 @@ class DNA {
     root = randTree(MAX_DEPTH);
   }
 
+  String toStr() {
+    return root.toStr();
+  }
+
   Node randTree(int depth) {
-    for (int i = 0; i < MAX_DEPTH - depth; i ++) {
-      print("-");
-    }
     float probVar = map(depth, MAX_DEPTH, 0, 0, 1);
-    if (random(1) < probVar){// || depth == 0) {
+    if (random(1) < probVar || MAX_DEPTH == 0) {
       Node randVar = randVar();
-      print(randVar.type + "\n");
       return randVar;
     }
     Node root = randNode();
-    print(root.type + "\n");
     if (root.type == _type.IFTHEN) {
       Node bool = randBool();
       for (int i = 0; i < bool.n_args; i++) {
@@ -130,8 +129,12 @@ class DNA {
     float norm_x = 2*((float)x) / ((float)width) - 1.0;  
     float norm_y = 2*((float)y) / ((float)height) - 1.0;
     float col = this.getRootVal(norm_x, norm_y);
-    col = col/(1+col);
-    return max(min(col, 10000000), -10000000);
+    if (col == -1) {
+      col = col/(col - 1) ;
+    } else { 
+      col = col/(col + 1);
+    }
+    return col;//max(min(col, 10000000), -10000000);
     //return min(255, max(0, (int)col));
   }
 
@@ -150,12 +153,73 @@ class DNA {
       type = _type.ADD;
     }
 
+    String toStr() {
+      switch(this.type) {
+      case VAR:
+      case CONST:
+        return this.toStr();
+      case SIN:
+        return "sin (" + this.args.get(0).toStr() + ")";
+      case COS:
+        return "cos (" + this.args.get(0).toStr() + ")";
+      case ASIN:
+        return "asin (" + this.args.get(0).toStr() + ")";
+      case ACOS:
+        return "acos (" + this.args.get(0).toStr() + ")";
+      case TAN:
+        return "tan (" + this.args.get(0).toStr() + ")";
+      case ATAN:
+        return "atan (" + this.args.get(0).toStr() + ")";
+      case EXP:
+        return "exp (" + this.args.get(0).toStr() + ")";
+      case SQRT:
+        return "sqrt (" + this.args.get(0).toStr() + ")";
+      case ABS:
+        return "abs (" + this.args.get(0).toStr() + ")";
+      case SQ:
+        return "(" + this.args.get(0).toStr() + ")^2";
+      case LOG:
+        return "log (" + this.args.get(0).toStr() + ") / log (" + this.args.get(1).toStr() + ")";
+      case ADD:
+        return this.args.get(0).toStr() + " + " + this.args.get(1).toStr();
+      case SUB:
+        return this.args.get(0).toStr() + " - " + this.args.get(1).toStr();
+      case MULT:
+        return this.args.get(0).toStr() + " * " + this.args.get(1).toStr();
+      case DIV:
+        return this.args.get(0).toStr() + " / " + this.args.get(1).toStr();
+      case MOD:
+        return this.args.get(0).toStr() + " % " + this.args.get(1).toStr();
+      case EQUALS:
+        return this.args.get(0).toStr() + " == " + this.args.get(1).toStr();
+      case LT:
+        return this.args.get(0).toStr() + " < " + this.args.get(1).toStr();
+      case GT:
+        return this.args.get(0).toStr() + " > " + this.args.get(1).toStr();
+      case NOISE:
+        return "noise (" + this.args.get(0).toStr() + ", " + this.args.get(1).toStr() + ")";
+      case RANDOMGAUSS:
+        return "nog niet geimplmemnteerd ";
+      case POW:
+        return "pow (" + this.args.get(0).toStr() + ", " + this.args.get(1).toStr() + ")";
+      case MAG:
+        return "length (" + this.args.get(0).toStr() + ", " + this.args.get(1).toStr() + ")";
+      case PERLIN:
+        return "perlin (" + this.args.get(0).toStr() + ", " + this.args.get(1).toStr() + ")";
+      case IFTHEN:
+      case LERP:
+        return "lerp (" + this.args.get(0).toStr() + ", " + this.args.get(1).toStr() + ", " + this.args.get(2).toStr() + ")";
+      default:
+        print("WTF");
+        return "hoi";
+      }
+    }
+
     float getVal(float x, float y) {
       switch(this.type) {
       case VAR:
       case CONST:
-        print(this.getClass());
-        //return this.getVal(x, y);
+        return this.getVal(x, y);
 
       case SIN:
         return sin((args.get(0).getVal(x, y)*PI)/2 + 0.5);
@@ -236,6 +300,9 @@ class DNA {
     float getVal(float x, float y) { 
       return x;
     }
+    String toStr() {
+      return "x";
+    }
   }
 
   class Y extends Node {
@@ -246,6 +313,9 @@ class DNA {
     float getVal(float x, float y) { 
       return y;
     }
+    String toStr() {
+      return "y";
+    }
   }
 
   class Ang extends Node {
@@ -255,6 +325,9 @@ class DNA {
     }
     float getVal(float x, float y) { 
       return tan(y/x);
+    }
+    String toStr() {
+      return "ang";
     }
   }
 
@@ -267,6 +340,9 @@ class DNA {
       return random(-10, 10);
       //TODO!
     }
+    String toStr() {
+      return "const";  
+    }
   }
 
   class Rad extends Node {
@@ -276,6 +352,9 @@ class DNA {
     }
     float getVal(float x, float y) { 
       return dist(x, y, 0, 0);
+    }
+    String toStr() {
+      return "r";
     }
   }
 }

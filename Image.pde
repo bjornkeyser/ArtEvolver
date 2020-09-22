@@ -1,5 +1,5 @@
-color warm = color(random(0,360), 100, 100);
-color cool = color(random(0,360), 100, 100);
+color warm = color(20, 100, 100);
+color cool = color(230, 100, 100);
 color stroke = color(0, 0, 0);
 
 class Image {
@@ -12,7 +12,7 @@ class Image {
     h = hh;
     isBW = BW;
     grey = new DNA();
-    //print(grey.toStr() + "\n");
+    print(grey.toStr() + "\n");
     //hue = new DNA(0);
     //sat = new DNA(0);
     //bri = new DNA(0);
@@ -30,16 +30,23 @@ class Image {
           //stroke(hu, s, b);
         } else {
           float bw = grey.getColorVal(x, y, w);
-          float scaledCol = ((bw/(bw+1)) + 1)/2; //TODO: idont even fokin know
+          float scaledCol = (bw + 1)/2; //scale to [0,1] TODO: idont even fokin know
           if (scaledCol < min) min = scaledCol;
           if (scaledCol > max) max = scaledCol;
-          stroke = lerpColor(warm, cool, scaledCol);
-          stroke = color(hue(stroke),map(scaledCol, -1, 1, 100, 0) ,255*bw);
+          
+          if (bw > 0) { stroke = warm; }
+          else { stroke = cool; }
+          //stroke = lerpColor(warm,cool,scaledCol);
+          //print(scaledCol + " ");
+          stroke = color(hue(stroke), 100-abs(scaledCol*10), abs(bw) * 100);
+          // HUE color
+          // SAT 0 = white, 100 = color of hue
+          // V or BRIGHTNESS = 0 = black
           stroke(stroke);
         }
         point(x, y);
       }
     }
-    print("min: " + min + " max: " + max);
+    print("min: " + min + " max: " + max + "\n");
   }
 }
