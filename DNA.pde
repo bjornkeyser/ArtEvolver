@@ -1,10 +1,10 @@
-enum _type {  //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>//
+enum _type { //<>// //<>// //<>// //<>//
   // arity 1
   SIN, COS, ASIN, ACOS, TAN, ATAN, EXP, SQRT, ABS, SQ, 
     // arity 2
     ADD, SUB, MULT, DIV, MOD, POW, LOG, MAG, PERLIN, 
     // arity 3
-    LERP, 
+    LERP, IFGTELSE, 
     // Exclude for now
     VAR, CONST, EQUALS, LT, GT, NOISE, RANDOMGAUSS, IFTHEN
     //TODO: bAND, bOR, XOR
@@ -13,13 +13,52 @@ enum _type {  //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<
 
 class DNA {
   Node root;
+  color warm;
+  color cool;
 
   DNA() {
     root = randTree(MAX_DEPTH);
+    warm = color(random(0, 80), 100, 100);
+    cool = color(random(150, 250), 100, 100);
+  }
+
+  DNA(Node r) {
+    root = r;
+    warm = color(random(0, 80), 100, 100);
+    cool = color(random(150, 250), 100, 100);
+  }
+
+  DNA getNthNode(int current, int n) {
+    return root.getNthNode(current, n);
+  }
+
+  void replace(DNA transplant) {
+    if (this.root.n_args > 0) {
+      int randomArgIndex = (int)random(this.root.n_args);
+      this.root.args.set(randomArgIndex, transplant.root);
+    } else {
+       print("this shouldn't print\n");
+    }
+  }
+
+  DNA copy() {
+    DNA copied = new DNA();
+    copied.root = root.copy();
+    copied.warm = this.warm;
+    copied.cool = this.cool;
+    return copied;
   }
 
   String toStr() {
     return root.toStr();
+  }
+
+  int getHeight() {
+    return root.getHeight();
+  }
+
+  int getSize() {
+    return root.getSize();
   }
 
   Node randTree(int depth) {
@@ -48,7 +87,7 @@ class DNA {
   }
 
   Node randNode() {
-    if (random(1) < 0.3) return randVar();
+    //if (random(1) < 0.2) return randVar(); //DIT KAN NIET MET TREEHEIGHT
     Node rand = new Node();
     rand.type = _type.values()[int(random((_type.values().length) - 9))];
     rand.n_args = getNumInputs(rand);
@@ -56,13 +95,15 @@ class DNA {
   }
 
   Node randVar() {
-    switch (int(random(4))) {
+    switch (int(random(5))) {
     case 0:
       return new X();
     case 1:
       return new Y();
-    case 2:
+    case 2:    
       return new Ang();
+    case 3:
+      return new Const();
     default:
       return new Rad();
     }
@@ -117,23 +158,19 @@ class DNA {
     case MAG:
     case PERLIN:
       return 2;
-    case IFTHEN:
     case LERP:
       return 3;
+    case IFGTELSE:
+      return 4;
     default:
       print("WTF");
       return 0;
     }
   }
-  float getColorVal(int x, int y, int w) {
-    float norm_x = 2*((float)x) / ((float)width) - 1.0;  
-    float norm_y = 2*((float)y) / ((float)height) - 1.0;
+  float getColorVal(int x, int y) {
+    float norm_x = 2*((float)x) / ((float)w) - 1.0;  
+    float norm_y = 2*((float)y) / ((float)h) - 1.0;
     float col = this.getRootVal(norm_x, norm_y);
-    if (col == -1) {
-      col = col/(col - 1) ;
-    } else { 
-      col = col/(col + 1);
-    }
     return col;//max(min(col, 10000000), -10000000);
     //return min(255, max(0, (int)col));
   }
@@ -151,6 +188,62 @@ class DNA {
 
     Node() {
       type = _type.ADD;
+    }
+
+    DNA getNthNode(int current, int n) {
+      current++;
+      print(current);
+      DNA nth = new DNA();
+      if (current == n && this.n_args > 0) {
+        nth.root = this;
+        return nth;
+      } else {
+        if (this.n_args > 0) {
+          for (int i = 0; i < this.n_args; i++) {
+            nth = this.args.get(i).getNthNode(current, n);
+            if (current == n) {
+              print("Bgot nth node: ");
+              nth.root = this;
+              print(nth.toStr() + "\n");
+              return nth;
+            }
+          }
+        }
+      }
+      return nth;
+    }
+
+    int getSize() {
+      if (this.type == _type.VAR || this.type == _type.CONST) return 0;  // does not include leaves, 1 otherwise TODO
+      int m = 1;
+      for (int i = 0; i < this.n_args; i++) {
+        m += this.args.get(i).getSize();
+      }
+      return m;
+    }
+
+    int getHeight() {
+      if (this.type == _type.VAR || this.type == _type.CONST) return 1;
+      int m = 0;
+      for (int i = 0; i < this.n_args; i++) {
+        int h = args.get(i).getHeight();
+        if (h > m)
+          m = h;
+      }
+      return m + 1;
+    }
+
+    Node copy() {
+      Node copied = new Node();
+      copied.type = this.type;
+      copied.n_args = this.n_args;
+      ArrayList<Node> copiedArgs = new ArrayList<Node>();
+
+      for (int i = 0; i < this.n_args; i++) {
+        copiedArgs.add(this.args.get(i).copy());
+      }
+      copied.args = copiedArgs;
+      return copied;
     }
 
     String toStr() {
@@ -207,6 +300,8 @@ class DNA {
       case PERLIN:
         return "perlin (" + this.args.get(0).toStr() + ", " + this.args.get(1).toStr() + ")";
       case IFTHEN:
+      case IFGTELSE:
+        return "if (" + this.args.get(0).toStr() + " > " + this.args.get(1).toStr() + ") {" + this.args.get(2).toStr() + "} else {" + this.args.get(3).toStr() + "}";
       case LERP:
         return "lerp (" + this.args.get(0).toStr() + ", " + this.args.get(1).toStr() + ", " + this.args.get(2).toStr() + ")";
       default:
@@ -272,6 +367,8 @@ class DNA {
         return lerp(args.get(0).getVal(x, y), args.get(1).getVal(x, y), args.get(2).getVal(x, y)/(args.get(2).getVal(x, y)+1));
       case IFTHEN:
         return args.get(0).getBoolVal(x, y) ? args.get(1).getVal(x, y) : args.get(2).getVal(x, y);
+      case IFGTELSE:
+        return (args.get(0).getVal(x, y) > args.get(1).getVal(x, y)) ? args.get(2).getVal(x, y) : args.get(3).getVal(x, y);
       default:
         print("Error: " + this.type + "\n");
         return 1;
@@ -303,6 +400,10 @@ class DNA {
     String toStr() {
       return "x";
     }
+
+    Node copy() {
+      return new X();
+    }
   }
 
   class Y extends Node {
@@ -315,6 +416,10 @@ class DNA {
     }
     String toStr() {
       return "y";
+    }
+
+    Node copy() {
+      return new Y();
     }
   }
 
@@ -329,19 +434,35 @@ class DNA {
     String toStr() {
       return "ang";
     }
+
+    Node copy() {
+      return new Ang();
+    }
   }
 
   class Const extends Node {
+    float val;
+
     Const() {
+      val = random(-10, 10);
       type = _type.CONST;
       n_args = 0;
     }
+
+    Const(float c) {
+      val = c;
+      type = _type.CONST;
+      n_args = 0;
+    }
+
     float getVal(float x, float y) {
-      return random(-10, 10);
-      //TODO!
+      return val;
     }
     String toStr() {
-      return "const";  
+      return Float.toString(val);
+    }
+    Node copy() {
+      return new Const(this.val);
     }
   }
 
@@ -356,7 +477,59 @@ class DNA {
     String toStr() {
       return "r";
     }
+    Node copy() {
+      return new Rad();
+    }
   }
+}
+
+// helper: replace a portion of a with b
+DNA _breed(DNA a, DNA b) {
+  DNA child = a.copy();
+  DNA transplant = getRandomNode(b).copy();
+  if (transplant == null) print("\nError: Node is null\n");
+  else print("Success getting random node: " + transplant.toStr() + "\n");
+  DNA toReplace = getRandomNode(child);
+  toReplace.replace(transplant);
+  print("child born!!: " + child.toStr() + "\n");
+  return child;
+}
+
+DNA breed(DNA ma, DNA pa) {
+  if (ma.getHeight() <= 1) {
+    if (pa.getHeight() <= 1) {
+      // no crossbreeding possible
+      if (random(1) < 0.5) return ma;
+      return pa;
+    } else {
+      return _breed(pa, ma);
+    }
+  } else if (pa.getHeight() <= 1) {
+    return _breed(ma, pa);
+  } else {
+    if (random(1) < 0.5) return _breed(ma, pa);
+    return _breed(pa, ma);
+  }
+}
+
+DNA[] breed(DNA ma, DNA pa, int num_children) {
+  DNA[] children = new DNA[num_children];
+  for (int i = 0; i < num_children; i++) {
+    children[i] = breed(ma, pa);
+    //mutate
+    //TODO:DNA mutant = children[i].mutate(children[i].getHeight());
+  }
+
+  return children;
+}
+
+// Return a random node (including children)
+DNA getRandomNode(DNA tree) {
+  int index = (int)random(float(tree.getSize()));
+  print("random index: " + index + "\n");
+  print("tree size: " + tree.getSize() + "\n");
+  //print("random node " + tree.root.getNthNode(-1, index).toStr() + "\n");
+  return tree.getNthNode(-1, index);
 }
 
 float map4InverseTrig(float x) {
